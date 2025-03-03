@@ -1,6 +1,7 @@
 import gym
 import random
 import numpy as np
+import math
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -38,32 +39,40 @@ print(f"Using device: {device}")
 class DQN(nn.Module):
     def __init__(self, input_channels, num_actions):
         super(DQN, self).__init__()
+
+        # Taken from original paper, but may be different for different games
+        input_W = 84
+        input_H = 110
+
+        # This NN architecture is based on the original DQN Atari paper. This implementation deviates from the original
+        # by accepting rectangular input whereas a square input is used in the original. 
         
-        # TODO: Implement the DQN architecture here
-        # Hint: For Atari, you'll want convolutional layers followed by fully connected layers
-        # Example structure (from the original DQN paper):
-        # - Conv layers to process the visual input
-        # - Fully connected layers to produce action values
-        
-        # Placeholder implementation (you should replace this):
-        self.conv1 = nn.Conv2d(input_channels, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        conv1_channels = 16
+        conv2_channels = 32
+                
+        self.conv1 = nn.Conv2d(input_channels, conv1_channels, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(conv1_channels, conv2_channels, kernel_size=4, stride=2)
+
+        # TODO: Calculate correct padding
+        out1_W, out1_H = self.compute_conv_output_shape(input_H, input_W, 0, 8, 4)
+        out2_W, out2_H = self.compute_conv_output_shape(out1_H, out1_W, 0, 4, 2)
         
         # Calculate the size of the feature maps after convolutions
-        self.fc_input_dims = 7 * 7 * 64  # This depends on input size and conv layers
+        self.fc_input_dims = out2_W * out2_H * conv2_channels  # This depends on input size and conv layers
         
-        self.fc1 = nn.Linear(self.fc_input_dims, 512)
-        self.fc2 = nn.Linear(512, num_actions)
+        self.fc1 = nn.Linear(self.fc_input_dims, 256)
+        self.fc2 = nn.Linear(256, num_actions)
+
+    def compute_conv_output_shape(self, input_W, input_H, padding, kernel_size, stride):
+        # returns tuple of (output_width, output_height)
+        def compute_shape(input):
+            return math.floor((input + 2*padding - kernel_size) / stride) + 1
+        
+        return (compute_shape(input_W), compute_shape(input_H))
     
     def forward(self, x):
-        # TODO: Implement the forward pass
-        # Hint: Apply activation functions between layers (typically ReLU)
-        
-        # Placeholder implementation (you should improve this):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
         x = x.view(x.size(0), -1)  # Flatten
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
