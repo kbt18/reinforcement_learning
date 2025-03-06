@@ -41,6 +41,7 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
 
         # Taken from original paper, but may be different for different games
+        # TODO: pass these values as parameters
         input_W = 84
         input_H = 110
 
@@ -80,19 +81,21 @@ class DQN(nn.Module):
         return x
 
 # Experience Replay Buffer
+# Policy updates use a batch of experiences instead of just the most recent experience
+# This can stabilize learning, and has the following benefits:
+#   * More efficient use of data, rather than using each experince once and then discarding.
+#   * sequential experiences may be correlated. The replay buffer breaks this correlation and increases stability
+#   * Rare but important experiences can be re-used for policy updates
+#   * Smoother learning, which is beneficial for DQN which can be unstable
 class ReplayBuffer:
     def __init__(self, capacity):
         self.memory = deque(maxlen=capacity)
     
     def push(self, state, action, reward, next_state, done):
-        # TODO: Implement the storage of experience tuples
-        # Hint: Consider storing experiences as (state, action, reward, next_state, done)
-        pass
+        self.memory.append((state, action, reward, next_state, done))
     
     def sample(self, batch_size):
-        # TODO: Implement random sampling of experience tuples
-        # Hint: Return a batch of (state, action, reward, next_state, done) tuples
-        pass
+        return random.sample(self.memory, batch_size)
     
     def __len__(self):
         return len(self.memory)
