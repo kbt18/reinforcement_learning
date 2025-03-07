@@ -55,8 +55,8 @@ class DQN(nn.Module):
         self.conv2 = nn.Conv2d(conv1_channels, conv2_channels, kernel_size=4, stride=2)
 
         # TODO: Calculate correct padding
-        out1_W, out1_H = self.compute_conv_output_shape(input_H, input_W, 0, 8, 4)
-        out2_W, out2_H = self.compute_conv_output_shape(out1_H, out1_W, 0, 4, 2)
+        out1_W, out1_H = self._compute_conv_output_shape(input_H, input_W, 0, 8, 4)
+        out2_W, out2_H = self._compute_conv_output_shape(out1_H, out1_W, 0, 4, 2)
         
         # Calculate the size of the feature maps after convolutions
         self.fc_input_dims = out2_W * out2_H * conv2_channels  # This depends on input size and conv layers
@@ -64,7 +64,7 @@ class DQN(nn.Module):
         self.fc1 = nn.Linear(self.fc_input_dims, 256)
         self.fc2 = nn.Linear(256, num_actions)
 
-    def compute_conv_output_shape(self, input_W, input_H, padding, kernel_size, stride):
+    def _compute_conv_output_shape(self, input_W, input_H, padding, kernel_size, stride):
         # returns tuple of (output_width, output_height)
         def compute_shape(input):
             return math.floor((input + 2*padding - kernel_size) / stride) + 1
@@ -101,12 +101,13 @@ class ReplayBuffer:
         return len(self.memory)
 
 # Epsilon-greedy action selection
-def select_action(state, policy_net, epsilon, num_actions):
-    # TODO: Implement epsilon-greedy action selection
-    # Hint:
-    # - With probability epsilon, select a random action
-    # - Otherwise, select the action with the highest Q-value from the policy network
-    pass
+def select_action(state, policy_net: DQN, epsilon: float, num_actions: int):
+    event = random.random()
+    if event >= epsilon:
+        return random.randint(0, num_actions)
+    
+    q_values = policy_net.forward(state)
+    return np.argmax(q_values)
 
 # Preprocess the environment
 def make_atari_env(env_name):
