@@ -40,6 +40,8 @@ class DQN(nn.Module):
     def __init__(self, input_channels, num_actions):
         super(DQN, self).__init__()
 
+        # Takes in a state and outputs action value pairs
+
         # Taken from original paper, but may be different for different games
         # TODO: pass these values as parameters
         input_W = 84
@@ -156,7 +158,9 @@ def train_dqn(env_name="PongNoFrameskip-v4"):
     
     # Initialize state
     state = env.reset()
-    
+
+    loss_fn = nn.MSELoss()
+
     # Main training loop
     for frame_idx in tqdm(range(1, TOTAL_FRAMES + 1)):
         # Calculate epsilon for exploration
@@ -191,7 +195,32 @@ def train_dqn(env_name="PongNoFrameskip-v4"):
         # 2. Compute Q-values and target Q-values
         # 3. Compute loss (typically MSE or Huber loss)
         # 4. Perform backpropagation and optimization
+        batch = memory.sample(BATCH_SIZE)
+
+        states, actions, rewards, next_states, dones = zip(*batch)
+        # Convert to appropriate tensor formats if needed
+        states = torch.stack(states)
+        actions = torch.tensor(actions)
+        rewards = torch.tensor(rewards)
+        next_states = torch.stack(next_states)
+        dones = torch.tensor(dones, dtype=torch.float)
+
+        # Get Q-values for all actions in current states, then select only the ones for actions taken
+        q_values = policy_net.forward(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+
+        # Compute max Q-values for next states
+        with torch.no_grad():
+            next_q_values = target_net.forward(next_states).max(1)[0]
+
+        # Compute target Q-values
+        q_targets = rewards + GAMMA * next_q_values * (1 - dones)
+
+        loss = loss_fn(q_values, q_targets)
         
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
         # Periodically update the target network
         if frame_idx % TARGET_UPDATE == 0:
             target_net.load_state_dict(policy_net.state_dict())
