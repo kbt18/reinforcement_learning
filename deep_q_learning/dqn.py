@@ -212,7 +212,7 @@ def train_dqn(env_name="PongNoFrameskip-v4"):
         with torch.no_grad():
             next_q_values = target_net.forward(next_states).max(1)[0]
 
-        # Compute target Q-values
+        # Compute target Q-values. Only add q values for states that are not done.
         q_targets = rewards + GAMMA * next_q_values * (1 - dones)
 
         loss = loss_fn(q_values, q_targets)
@@ -242,14 +242,25 @@ def train_dqn(env_name="PongNoFrameskip-v4"):
     return policy_net
 
 # Function to watch the trained agent play
-def watch_agent(env_name, model_path, num_episodes=5):
+def watch_agent(env_name, model_path, num_episodes=1):
     # TODO: Implement a function to visualize the trained agent's performance
     # Hint:
     # 1. Load the trained model
     # 2. Create the environment
     # 3. Run episodes with the trained policy (no exploration)
     # 4. Render the environment to see the agent in action
-    pass
+    env = gym.make(env_name)
+
+    policy_net = torch.load(model_path).eval()
+    for _ in range(num_episodes):
+        state = env.reset()
+        done = False
+        while not done:
+            env.render()
+            q_values = policy_net.forward(state)
+            action = np.argmax(q_values)
+            state, _, done, _ = env.step(action)
+
 
 if __name__ == "__main__":
     # Train the agent
