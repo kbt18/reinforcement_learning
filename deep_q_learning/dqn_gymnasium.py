@@ -37,6 +37,14 @@ class DQN(nn.Module):
         # - Conv layers with nonlinearities
         # - Flatten
         # - Fully connected layers
+        c, h, w = input_shape
+
+        self.conv1 = nn.Conv2d(c, 16, 8, 4)
+        self.conv2 = nn.Conv2d(16, 32, 4, 2)
+
+        out_dims = self._get_conv_output((c, h, w))
+        self.fc1 = nn.Linear(out_dims, 256)
+        self.fc2 = nn.Linear(256, num_actions)
         
         # Calculate the size of the features after convolutions
         # TODO: Replace this placeholder calculation with the correct one for your architecture
@@ -54,7 +62,6 @@ class DQN(nn.Module):
         """
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
         return x
     
     def forward(self, x):
@@ -63,6 +70,13 @@ class DQN(nn.Module):
         """
         # TODO: Implement the forward pass
         # Hint: Remember to handle batch dimension correctly
+
+        x = self._forward_conv(x)
+        x = x.flatten(1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        return x
 
 
 # Replay Buffer for storing experiences
